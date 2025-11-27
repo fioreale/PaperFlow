@@ -9,6 +9,7 @@ Research Paper Management System built with FastAPI.
 - CORS middleware configured
 - Environment-based configuration
 - Health check endpoint
+- Managed by Rye for streamlined dependency management
 
 ## Project Structure
 
@@ -31,7 +32,8 @@ PaperFlow/
 │   │   └── __init__.py
 │   └── services/            # Business logic
 │       └── __init__.py
-├── requirements.txt
+├── pyproject.toml
+├── .python-version
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -41,26 +43,25 @@ PaperFlow/
 
 ### Prerequisites
 
-- Python 3.8+
-- pip
+- [Rye](https://rye-up.com/) - Modern Python package manager
+- Python 3.11+
 
 ### Installation
 
-1. Clone the repository:
+1. Install Rye (if not already installed):
+```bash
+curl -sSf https://rye-up.com/get | bash
+```
+
+2. Clone the repository:
 ```bash
 git clone <repository-url>
 cd PaperFlow
 ```
 
-2. Create a virtual environment:
+3. Sync dependencies:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
+rye sync
 ```
 
 4. Create environment file:
@@ -70,12 +71,17 @@ cp .env.example .env
 
 5. Run the application:
 ```bash
-python -m app.main
+rye run dev
 ```
 
-Or using uvicorn directly:
+Or start without auto-reload:
 ```bash
-uvicorn app.main:app --reload
+rye run start
+```
+
+Or manually with uvicorn:
+```bash
+rye run uvicorn app.main:app --reload
 ```
 
 ## API Documentation
@@ -91,25 +97,38 @@ Once the application is running, you can access:
 ### Running Tests
 
 ```bash
-pytest
+rye run pytest
 ```
 
 ### Code Formatting
 
 ```bash
-black app/
+rye run black app/
 ```
 
 ### Linting
 
 ```bash
-flake8 app/
+rye run flake8 app/
 ```
 
 ### Type Checking
 
 ```bash
-mypy app/
+rye run mypy app/
+```
+
+### Adding Dependencies
+
+```bash
+# Add a runtime dependency
+rye add <package-name>
+
+# Add a development dependency
+rye add --dev <package-name>
+
+# Sync dependencies
+rye sync
 ```
 
 ## License

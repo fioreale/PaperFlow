@@ -27,6 +27,11 @@ env/
 ENV/
 .venv
 
+# Rye
+.rye/
+requirements.lock
+requirements-dev.lock
+
 # IDE
 .vscode/
 .idea/
