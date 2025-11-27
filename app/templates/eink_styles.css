@@ -1,0 +1,222 @@
+/* E-ink optimized CSS for reMarkable tablets */
+/* Optimized for grayscale display and annotation space */
+
+@page {
+    size: Letter;
+    margin: 1in 1in 1in 1in;
+}
+
+* {
+    /* Ensure all elements use grayscale */
+    color: #000000;
+}
+
+body {
+    font-family: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000000;
+    background-color: #ffffff;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Typography */
+h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    line-height: 1.4;
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+}
+
+h2 {
+    font-size: 16pt;
+    font-weight: bold;
+    line-height: 1.4;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 14pt;
+    font-weight: bold;
+    line-height: 1.4;
+    margin-top: 0.75em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+}
+
+h4, h5, h6 {
+    font-size: 12pt;
+    font-weight: bold;
+    line-height: 1.4;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 0.75em;
+    orphans: 3;
+    widows: 3;
+}
+
+/* Links - convert to grayscale and underline */
+a {
+    color: #000000;
+    text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.75em;
+    padding-left: 1.5em;
+}
+
+li {
+    margin-bottom: 0.25em;
+}
+
+/* Block quotes */
+blockquote {
+    margin: 1em 0;
+    padding-left: 1em;
+    border-left: 3pt solid #333333;
+    font-style: italic;
+}
+
+/* Code blocks */
+pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    line-height: 1.4;
+    background-color: #f5f5f5;
+    border: 1pt solid #cccccc;
+    padding: 0.5em;
+    margin: 0.75em 0;
+    overflow-x: auto;
+    page-break-inside: avoid;
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    background-color: #f5f5f5;
+    padding: 0.1em 0.3em;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.75em 0;
+    page-break-inside: avoid;
+}
+
+th, td {
+    border: 1pt solid #333333;
+    padding: 0.5em;
+    text-align: left;
+}
+
+th {
+    font-weight: bold;
+    background-color: #e0e0e0;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+    /* Convert to grayscale */
+    filter: grayscale(100%);
+}
+
+/* Figures and captions */
+figure {
+    margin: 1em 0;
+    page-break-inside: avoid;
+}
+
+figcaption {
+    font-size: 10pt;
+    font-style: italic;
+    margin-top: 0.5em;
+    text-align: center;
+}
+
+/* Horizontal rules */
+hr {
+    border: none;
+    border-top: 1pt solid #333333;
+    margin: 1.5em 0;
+}
+
+/* Article metadata */
+.article-meta {
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+    border-bottom: 1pt solid #333333;
+}
+
+.article-title {
+    font-size: 20pt;
+    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+
+.article-author {
+    font-size: 11pt;
+    font-style: italic;
+    margin-bottom: 0.25em;
+}
+
+.article-date {
+    font-size: 10pt;
+    color: #333333;
+    margin-bottom: 0.25em;
+}
+
+.article-url {
+    font-size: 9pt;
+    color: #333333;
+    word-break: break-all;
+}
+
+/* Remove unwanted elements */
+nav, .nav, .navigation,
+.sidebar, .aside,
+.advertisement, .ad, .ads,
+.social-share, .share,
+.comments, .comment-section,
+header.site-header,
+footer.site-footer {
+    display: none;
+}
+
+/* Print optimization */
+@media print {
+    body {
+        font-size: 12pt;
+    }
+
+    a {
+        color: #000000;
+    }
+
+    /* Avoid page breaks in important elements */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+    }
+
+    img, pre, blockquote, table {
+        page-break-inside: avoid;
+    }
+}

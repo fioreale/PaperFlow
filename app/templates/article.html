@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        {{ css }}
+    </style>
+</head>
+<body>
+    <div class="article-meta">
+        <h1 class="article-title">{{ title }}</h1>
+        {% if author %}
+        <div class="article-author">By {{ author }}</div>
+        {% endif %}
+        {% if date_published %}
+        <div class="article-date">{{ date_published }}</div>
+        {% endif %}
+        <div class="article-url">{{ url }}</div>
+    </div>
+
+    <div class="article-content">
+        {{ content | safe }}
+    </div>
+</body>
+</html>
