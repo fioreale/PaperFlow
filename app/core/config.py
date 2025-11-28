@@ -30,10 +30,6 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 100
 
-    # Mercury Parser API settings
-    MERCURY_API_KEY: Optional[str] = None
-    MERCURY_API_URL: str = "https://mercury.postlight.com/parser"
-
     # Dropbox API settings
     DROPBOX_ACCESS_TOKEN: Optional[str] = None
     DROPBOX_FOLDER_PATH: str = "/PaperFlow"
