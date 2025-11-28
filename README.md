@@ -4,7 +4,7 @@ Automated Web Article to PDF Conversion System for reMarkable Tablets.
 
 ## Overview
 
-PaperFlow is a containerized microservice that converts web articles into optimized PDFs for reMarkable e-ink devices. The system uses FastAPI as the API gateway, Mercury Parser for content extraction, WeasyPrint for PDF rendering, and Dropbox for device synchronization.
+PaperFlow is a containerized microservice that converts web articles into optimized PDFs for reMarkable e-ink devices. The system uses FastAPI as the API gateway, trafilatura for Python-based content extraction, WeasyPrint for PDF rendering, and Dropbox for device synchronization.
 
 ## Features
 
@@ -279,7 +279,6 @@ docker run -d \
 ### Optional Configuration
 
 - `DROPBOX_ACCESS_TOKEN`: Dropbox access token for automatic upload
-- `MERCURY_API_KEY`: Mercury Parser API key (deprecated, but supported)
 
 See `.env.example` for all available configuration options.
 
@@ -288,7 +287,7 @@ See `.env.example` for all available configuration options.
 ### System Components
 
 - **FastAPI Service**: API gateway and orchestration
-- **Mercury Parser**: Content extraction from web pages
+- **Trafilatura**: Python-based content extraction from web pages
 - **WeasyPrint**: HTML to PDF conversion engine
 - **Dropbox Integration**: Cloud storage connector
 - **Redis**: Message broker for async processing (optional)
@@ -297,7 +296,7 @@ See `.env.example` for all available configuration options.
 
 1. Client submits article URL via POST /api/v1/convert
 2. FastAPI creates job and processes in background
-3. Mercury Parser extracts clean content
+3. Trafilatura extracts clean content from the HTML
 4. WeasyPrint renders PDF with e-ink optimized styling
 5. PDF uploaded to Dropbox (if configured)
 6. Client checks status via GET /api/v1/status/{job_id}

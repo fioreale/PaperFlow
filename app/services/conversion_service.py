@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 from app.schemas.conversion import JobStatus
-from app.services.mercury_parser import MercuryParserService
+from app.services.article_extractor import ArticleExtractorService
 from app.services.pdf_generator import PDFGeneratorService
 from app.services.dropbox_service import DropboxService
 from app.services.job_manager import JobManager, Job
@@ -21,12 +21,12 @@ class ConversionService:
 
     def __init__(
         self,
-        mercury_service: MercuryParserService,
+        extractor_service: ArticleExtractorService,
         pdf_service: PDFGeneratorService,
         dropbox_service: DropboxService,
         job_manager: JobManager,
     ):
-        self.mercury = mercury_service
+        self.extractor = extractor_service
         self.pdf = pdf_service
         self.dropbox = dropbox_service
         self.jobs = job_manager
@@ -46,7 +46,7 @@ class ConversionService:
 
             # Step 1: Extract article content
             logger.info(f"Extracting content for job {job.job_id} from {job.url}")
-            article = await self.mercury.extract_article(job.url)
+            article = await self.extractor.extract_article(job.url)
 
             # Update job with extracted title if not provided
             if not job.title:
