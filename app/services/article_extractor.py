@@ -11,7 +11,7 @@ class ArticleExtractorService:
 
     def __init__(self):
         """Initialize the article extractor service."""
-        self.timeout = 30000  # 30 seconds in milliseconds for Playwright
+        self.timeout = 60000  # 60 seconds in milliseconds for Playwright
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         self._browser: Optional[Browser] = None
         self._context: Optional[BrowserContext] = None
@@ -116,11 +116,16 @@ class ArticleExtractorService:
         if self._context:
             page = await self._context.new_page()
             try:
+                # Use 'load' instead of 'networkidle' for sites with continuous JS activity
+                # 'load' waits for the load event (DOM + resources), which is more reliable
+                # than 'networkidle' for dynamic sites like Medium
                 await page.goto(
                     url,
-                    wait_until='networkidle',
+                    wait_until='load',
                     timeout=self.timeout
                 )
+                # Give extra time for dynamic content to render
+                await page.wait_for_timeout(2000)  # 2 seconds for JS execution
                 html_content = await page.content()
                 return html_content
             finally:
@@ -142,11 +147,14 @@ class ArticleExtractorService:
 
                     page = await context.new_page()
 
+                    # Use 'load' instead of 'networkidle' for sites with continuous JS activity
                     await page.goto(
                         url,
-                        wait_until='networkidle',
+                        wait_until='load',
                         timeout=self.timeout
                     )
+                    # Give extra time for dynamic content to render
+                    await page.wait_for_timeout(2000)  # 2 seconds for JS execution
 
                     html_content = await page.content()
                     return html_content

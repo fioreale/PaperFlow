@@ -28,7 +28,7 @@ async def test_extraction():
     # Test URLs (using commonly stable URLs for testing)
     test_urls = [
         "https://example.com",
-        "https://en.wikipedia.org/wiki/Python_(programming_language)",
+        "https://medium.com/@alaayedi090/a-journey-through-azure-building-a-domain-controller-syncing-with-entra-connect-and-enhancing-94885a22a7a8",
     ]
 
     print("=" * 80)
