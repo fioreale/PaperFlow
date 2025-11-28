@@ -9,7 +9,7 @@ from app.schemas.conversion import (
     JobStatusResponse,
     JobStatus,
 )
-from app.services.mercury_parser import MercuryParserService
+from app.services.article_extractor import ArticleExtractorService
 from app.services.pdf_generator import PDFGeneratorService
 from app.services.dropbox_service import DropboxService
 from app.services.conversion_service import ConversionService
@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Initialize services
-mercury_service = MercuryParserService()
+extractor_service = ArticleExtractorService()
 pdf_service = PDFGeneratorService()
 dropbox_service = DropboxService()
 conversion_service = ConversionService(
-    mercury_service, pdf_service, dropbox_service, job_manager
+    extractor_service, pdf_service, dropbox_service, job_manager
 )
 
 
