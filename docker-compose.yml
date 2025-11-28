@@ -24,7 +24,7 @@ services:
       - redis
     networks:
       - paperflow_network
-    command: rye run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   redis:
     image: redis:7-alpine

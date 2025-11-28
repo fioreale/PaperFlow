@@ -27,8 +27,7 @@ readme = "README.md"
 requires-python = ">= 3.11"
 
 [project.scripts]
-dev = "uvicorn app.main:app --reload"
-start = "uvicorn app.main:app"
+start = "uvicorn:main"
 
 [build-system]
 requires = ["hatchling"]
