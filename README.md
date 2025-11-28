@@ -16,7 +16,7 @@ PaperFlow is a containerized microservice that converts web articles into optimi
 - **API Authentication**: Secure API key-based authentication
 - **Docker Support**: Fully containerized for easy deployment
 - **Scalable Architecture**: Horizontal scaling capability with Redis
-- **Managed by Rye**: Streamlined dependency management
+- **Managed by UV**: Fast, modern Python package and project manager
 
 ## Project Structure
 
@@ -50,14 +50,14 @@ PaperFlow/
 
 ### Prerequisites
 
-- [Rye](https://rye-up.com/) - Modern Python package manager
+- [UV](https://docs.astral.sh/uv/) - Fast Python package and project manager
 - Python 3.11+
 
 ### Installation
 
-1. Install Rye (if not already installed):
+1. Install UV (if not already installed):
 ```bash
-curl -sSf https://rye-up.com/get | bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 2. Clone the repository:
@@ -68,7 +68,7 @@ cd PaperFlow
 
 3. Sync dependencies:
 ```bash
-rye sync
+uv sync
 ```
 
 4. Create environment file:
@@ -78,17 +78,12 @@ cp .env.example .env
 
 5. Run the application:
 ```bash
-rye run dev
+uv run uvicorn app.main:app --reload
 ```
 
-Or start without auto-reload:
+Or for production:
 ```bash
-rye run start
-```
-
-Or manually with uvicorn:
-```bash
-rye run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## API Documentation
@@ -196,38 +191,38 @@ print(status_response.json())
 ### Running Tests
 
 ```bash
-rye run pytest
+uv run pytest
 ```
 
 ### Code Formatting
 
 ```bash
-rye run black app/
+uv run black app/
 ```
 
 ### Linting
 
 ```bash
-rye run flake8 app/
+uv run flake8 app/
 ```
 
 ### Type Checking
 
 ```bash
-rye run mypy app/
+uv run mypy app/
 ```
 
 ### Adding Dependencies
 
 ```bash
 # Add a runtime dependency
-rye add <package-name>
+uv add <package-name>
 
 # Add a development dependency
-rye add --dev <package-name>
+uv add --group dev <package-name>
 
 # Sync dependencies
-rye sync
+uv sync
 ```
 
 ## Docker Deployment
