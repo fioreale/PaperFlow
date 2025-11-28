@@ -203,7 +203,12 @@ uv run black app/
 ### Linting
 
 ```bash
-uv run flake8 app/
+uv run ruff check app/
+```
+
+To automatically fix issues:
+```bash
+uv run ruff check --fix app/
 ```
 
 ### Type Checking
