@@ -1,18 +1,52 @@
-"""Article content extraction service using trafilatura."""
+"""Article content extraction service using trafilatura and playwright."""
 
-import httpx
 import trafilatura
 from typing import Optional
+from playwright.async_api import async_playwright, Browser, BrowserContext
 from app.schemas.conversion import ArticleContent
 
 
 class ArticleExtractorService:
-    """Service for extracting article content using trafilatura."""
+    """Service for extracting article content using trafilatura and playwright."""
 
     def __init__(self):
         """Initialize the article extractor service."""
-        self.timeout = 30.0
-        self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        self.timeout = 30000  # 30 seconds in milliseconds for Playwright
+        self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        self._browser: Optional[Browser] = None
+        self._context: Optional[BrowserContext] = None
+
+    async def __aenter__(self):
+        """Async context manager entry - initialize browser."""
+        await self._initialize_browser()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - cleanup browser."""
+        await self.close()
+
+    async def _initialize_browser(self):
+        """Initialize a persistent browser instance for reuse."""
+        if self._browser is None:
+            playwright = await async_playwright().start()
+            self._browser = await playwright.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-setuid-sandbox']
+            )
+            self._context = await self._browser.new_context(
+                user_agent=self.user_agent,
+                viewport={'width': 1920, 'height': 1080},
+                ignore_https_errors=False,
+            )
+
+    async def close(self):
+        """Close the browser and cleanup resources."""
+        if self._context:
+            await self._context.close()
+            self._context = None
+        if self._browser:
+            await self._browser.close()
+            self._browser = None
 
     async def extract_article(self, url: str) -> ArticleContent:
         """
@@ -67,7 +101,7 @@ class ArticleExtractorService:
 
     async def _fetch_html(self, url: str) -> str:
         """
-        Fetch HTML content from a URL.
+        Fetch HTML content from a URL using Playwright for JavaScript rendering.
 
         Args:
             url: The URL to fetch
@@ -78,14 +112,47 @@ class ArticleExtractorService:
         Raises:
             Exception: If fetching fails
         """
-        async with httpx.AsyncClient(
-            timeout=self.timeout,
-            follow_redirects=True,
-            headers={"User-Agent": self.user_agent},
-        ) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            return response.text
+        # Use persistent browser if available, otherwise create temporary one
+        if self._context:
+            page = await self._context.new_page()
+            try:
+                await page.goto(
+                    url,
+                    wait_until='networkidle',
+                    timeout=self.timeout
+                )
+                html_content = await page.content()
+                return html_content
+            finally:
+                await page.close()
+        else:
+            # Fallback to one-off browser instance
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-setuid-sandbox']
+                )
+
+                try:
+                    context = await browser.new_context(
+                        user_agent=self.user_agent,
+                        viewport={'width': 1920, 'height': 1080},
+                        ignore_https_errors=False,
+                    )
+
+                    page = await context.new_page()
+
+                    await page.goto(
+                        url,
+                        wait_until='networkidle',
+                        timeout=self.timeout
+                    )
+
+                    html_content = await page.content()
+                    return html_content
+
+                finally:
+                    await browser.close()
 
     def _get_title(self, metadata, html_content: str) -> str:
         """Extract title from metadata or HTML."""
