@@ -1,5 +1,6 @@
 """Article content extraction service using trafilatura and playwright."""
 
+import re
 import trafilatura
 from typing import Optional
 from playwright.async_api import async_playwright, Browser, BrowserContext
@@ -88,6 +89,9 @@ class ArticleExtractorService:
         # If extraction failed, fall back to basic extraction
         if not extracted_text:
             extracted_text = html_content
+        else:
+            # Post-process extracted content to fix common issues
+            extracted_text = self._post_process_content(extracted_text, url)
 
         return ArticleContent(
             title=title,
@@ -192,3 +196,148 @@ class ArticleExtractorService:
         if metadata and metadata.description:
             return metadata.description
         return None
+
+    def _post_process_content(self, html_content: str, url: str) -> str:
+        """
+        Post-process extracted content to fix common issues.
+
+        Args:
+            html_content: Extracted HTML content from trafilatura
+            url: Source URL to determine site-specific processing
+
+        Returns:
+            Cleaned HTML content
+        """
+        # Apply site-specific cleaning
+        if 'wikipedia.org' in url:
+            html_content = self._remove_wikipedia_artifacts(html_content)
+
+        # Apply general cleaning
+        html_content = self._remove_external_link_tags(html_content)
+        html_content = self._normalize_spacing(html_content)
+        html_content = self._remove_empty_tags(html_content)
+
+        return html_content
+
+    def _remove_wikipedia_artifacts(self, html_content: str) -> str:
+        """
+        Remove Wikipedia-specific UI elements from extracted content.
+
+        Args:
+            html_content: HTML content extracted from Wikipedia
+
+        Returns:
+            Cleaned HTML without Wikipedia UI artifacts
+        """
+        # Remove [edit] section links - Pattern: [<p><a href="...action=edit...">edit</a>]</p>
+        html_content = re.sub(
+            r'\[<p><a\s+href="[^"]*action=edit[^"]*">edit</a>\]</p>',
+            '',
+            html_content
+        )
+
+        # Remove standalone [edit] links
+        html_content = re.sub(
+            r'\[<a\s+href="[^"]*action=edit[^"]*">edit</a>\]',
+            '',
+            html_content
+        )
+
+        # Remove citation needed tags [citation needed]
+        html_content = re.sub(
+            r'\[<a\s+href="[^"]*citation[^"]*">citation needed</a>\]',
+            '',
+            html_content
+        )
+
+        # Remove other Wikipedia metadata brackets like [update], [when?], etc.
+        html_content = re.sub(
+            r'\[<a\s+href="[^"]*">(?:update|when\?|by whom\?|clarification needed)</a>\]',
+            '',
+            html_content,
+            flags=re.IGNORECASE
+        )
+
+        return html_content
+
+    def _remove_external_link_tags(self, html_content: str) -> str:
+        """
+        Remove link tags for external references but preserve the text content.
+        Keeps anchor tags that are internal page navigation (href starting with #).
+
+        Args:
+            html_content: HTML content
+
+        Returns:
+            HTML with external link tags removed but text preserved
+        """
+        # Remove <a> tags that link outside the page, but keep the text
+        # Match <a href="...">text</a> where href doesn't start with # (internal anchor)
+        def replace_external_link(match):
+            href = match.group(1)
+            text = match.group(2)
+
+            # Keep internal anchor links (e.g., href="#section")
+            if href.startswith('#'):
+                return match.group(0)  # Return original link unchanged
+
+            # For external links, return just the text content
+            return text
+
+        # Pattern: <a href="..." ...>text content</a>
+        # Captures href value and text content between tags
+        html_content = re.sub(
+            r'<a\s+href="([^"]*)"[^>]*>([^<]+)</a>',
+            replace_external_link,
+            html_content
+        )
+
+        return html_content
+
+    def _normalize_spacing(self, html_content: str) -> str:
+        """
+        Ensure proper spacing around inline elements to prevent word concatenation.
+
+        Args:
+            html_content: HTML content
+
+        Returns:
+            HTML with normalized spacing
+        """
+        # Add space after closing </a> tags if followed by uppercase letter
+        html_content = re.sub(r'</a>([A-Z])', r'</a> \1', html_content)
+
+        # Add space after closing </pre> tags if followed by text
+        html_content = re.sub(r'</pre>([A-Za-z])', r'</pre> \1', html_content)
+
+        # Add space after closing </code> tags if followed by text
+        html_content = re.sub(r'</code>([A-Za-z])', r'</code> \1', html_content)
+
+        # Normalize multiple spaces to single space (but preserve in <pre> tags)
+        # This is a simple approach - for production, use proper HTML parsing
+        html_content = re.sub(r'(?<=>)\s{2,}(?=<)', ' ', html_content)
+
+        return html_content
+
+    def _remove_empty_tags(self, html_content: str) -> str:
+        """
+        Remove empty HTML tags that don't add value.
+
+        Args:
+            html_content: HTML content
+
+        Returns:
+            HTML without empty tags
+        """
+        # Remove empty paragraph tags
+        html_content = re.sub(r'<p>\s*</p>', '', html_content)
+        html_content = re.sub(r'<p/>', '', html_content)
+
+        # Remove empty table elements
+        html_content = re.sub(r'<table>\s*</table>', '', html_content)
+        html_content = re.sub(r'<table/>', '', html_content)
+
+        # Remove multiple consecutive empty lines
+        html_content = re.sub(r'\n\s*\n\s*\n', '\n\n', html_content)
+
+        return html_content

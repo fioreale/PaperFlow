@@ -81,8 +81,8 @@ class PDFGeneratorService:
         Returns:
             Sanitized filename
         """
-        # Remove invalid characters
-        invalid_chars = '<>:"/\\|?*'
+        # Remove invalid characters (including control characters)
+        invalid_chars = '<>:"/\\|?*\n\t\r'
         filename = title
         for char in invalid_chars:
             filename = filename.replace(char, "_")
