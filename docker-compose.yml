@@ -8,17 +8,14 @@ services:
     volumes:
       - ./app:/app/app
       - pdf_storage:/tmp/paperflow
+    env_file:
+      - .env
     environment:
-      - DEBUG=True
-      - HOST=0.0.0.0
-      - PORT=8000
+      # Override Redis settings for Docker network
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      # Add your API keys here or use .env file
-      # - DROPBOX_ACCESS_TOKEN=your_dropbox_token
-      # - API_KEY=your_api_key_for_authentication
     depends_on:
       - redis
     networks:
