@@ -113,5 +113,4 @@ class PDFGeneratorService:
             Full path to output PDF file
         """
         filename = self.sanitize_filename(title)
-        # Use job_id as part of path to ensure uniqueness
-        return os.path.join(settings.TEMP_DIR, f"{job_id}_{filename}")
+        return os.path.join(settings.TEMP_DIR, filename)

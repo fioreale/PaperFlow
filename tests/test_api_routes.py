@@ -36,6 +36,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -81,6 +82,26 @@ async def browser_service():
 def client():
     """Create a test client for the FastAPI app."""
     return TestClient(app)
+
+
+@pytest.fixture
+def mock_dropbox_service(monkeypatch):
+    """Create a mocked Dropbox service."""
+    mock_service = MagicMock()
+    mock_service.is_configured = MagicMock(return_value=True)
+    mock_service.upload_file = AsyncMock(return_value=f"{settings.DROPBOX_FOLDER_PATH}/test_article.pdf")
+    mock_service.create_folder_if_not_exists = AsyncMock()
+    mock_service.get_shared_link = AsyncMock(return_value="https://www.dropbox.com/s/test123")
+
+    # Patch the dropbox_service instance in the conversion routes module
+    import app.api.routes.conversion as conversion_routes
+    monkeypatch.setattr(conversion_routes, "dropbox_service", mock_service)
+
+    # Also patch it in the conversion service if it's already been created
+    if hasattr(conversion_routes, "conversion_service"):
+        conversion_routes.conversion_service.dropbox = mock_service
+
+    return mock_service
 
 
 class TestHealthEndpoint:
@@ -183,10 +204,6 @@ class TestStatusEndpoint:
         assert "not found" in response.json()["detail"].lower()
 
 
-@pytest.mark.skipif(
-    not settings.DROPBOX_ACCESS_TOKEN,
-    reason="Dropbox not configured - set DROPBOX_ACCESS_TOKEN to run this test"
-)
 class TestConvertSyncEndpoint:
     """
     Tests for the synchronous /convert-sync endpoint.
@@ -194,13 +211,13 @@ class TestConvertSyncEndpoint:
     These tests verify end-to-end functionality including:
     - Article extraction
     - PDF generation
-    - Dropbox upload
+    - Dropbox upload (mocked)
 
-    Note: These tests require Dropbox to be configured and will make real API calls.
+    Note: These tests mock Dropbox to avoid requiring real credentials.
     """
 
     @pytest.mark.timeout(60)
-    def test_convert_sync_with_dropbox_upload(self, client):
+    def test_convert_sync_with_dropbox_upload(self, client, mock_dropbox_service):
         """
         Test full synchronous conversion with Dropbox upload.
 
@@ -216,7 +233,7 @@ class TestConvertSyncEndpoint:
             "upload_to_dropbox": True
         }
 
-        response = client.post("/api/v1/convert-sync", json=payload, timeout=60.0)
+        response = client.post("/api/v1/convert-sync", json=payload)
 
         assert response.status_code == 200
         data = response.json()
@@ -250,14 +267,14 @@ class TestConvertSyncEndpoint:
             print(f"\n✗ Conversion failed: {data['error']}")
 
     @pytest.mark.timeout(60)
-    def test_convert_sync_without_dropbox(self, client):
+    def test_convert_sync_without_dropbox(self, client, mock_dropbox_service):
         """Test synchronous conversion without Dropbox upload."""
         payload = {
             "url": "https://example.com",
             "upload_to_dropbox": False
         }
 
-        response = client.post("/api/v1/convert-sync", json=payload, timeout=60.0)
+        response = client.post("/api/v1/convert-sync", json=payload)
 
         assert response.status_code == 200
         data = response.json()
@@ -274,7 +291,7 @@ class TestConvertSyncEndpoint:
             assert pdf_path.exists()
             assert pdf_path.stat().st_size > 0
 
-    def test_convert_sync_invalid_url(self, client):
+    def test_convert_sync_invalid_url(self, client, mock_dropbox_service):
         """Test synchronous conversion with invalid URL."""
         payload = {
             "url": "not-a-valid-url",
@@ -296,11 +313,7 @@ class TestAsyncConversionFlow:
     """
 
     @pytest.mark.timeout(60)
-    @pytest.mark.skipif(
-        not settings.DROPBOX_ACCESS_TOKEN,
-        reason="Dropbox not configured"
-    )
-    def test_async_conversion_complete_flow(self, client):
+    def test_async_conversion_complete_flow(self, client, mock_dropbox_service):
         """
         Test the full async conversion workflow.
 

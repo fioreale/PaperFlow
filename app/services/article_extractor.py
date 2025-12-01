@@ -1,10 +1,11 @@
 """Article content extraction service using trafilatura and playwright."""
 
 import re
+
 import trafilatura
-from typing import Optional
-from playwright.async_api import async_playwright, Browser, BrowserContext
+from playwright.async_api import Browser, BrowserContext, async_playwright
 from playwright_stealth import Stealth
+
 from app.schemas.conversion import ArticleContent
 
 
@@ -15,8 +16,8 @@ class ArticleExtractorService:
         """Initialize the article extractor service."""
         self.timeout = 60000  # 60 seconds in milliseconds for Playwright
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        self._browser: Optional[Browser] = None
-        self._context: Optional[BrowserContext] = None
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
         self._stealth = Stealth()
 
     async def __aenter__(self):
@@ -33,12 +34,11 @@ class ArticleExtractorService:
         if self._browser is None:
             playwright = await async_playwright().start()
             self._browser = await playwright.chromium.launch(
-                headless=True,
-                args=['--no-sandbox', '--disable-setuid-sandbox']
+                headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"]
             )
             self._context = await self._browser.new_context(
                 user_agent=self.user_agent,
-                viewport={'width': 1920, 'height': 1080},
+                viewport={"width": 1920, "height": 1080},
                 ignore_https_errors=False,
             )
 
@@ -127,12 +127,8 @@ class ArticleExtractorService:
 
                 # Use 'load' instead of 'networkidle' for sites with continuous JS activity
                 # 'load' waits for the load event (DOM + resources), which is more reliable
-                # than 'networkidle' for dynamic sites like Medium
-                await page.goto(
-                    url,
-                    wait_until='load',
-                    timeout=self.timeout
-                )
+                # than 'networkidle' for dynamic sites
+                await page.goto(url, wait_until="load", timeout=self.timeout)
                 # Give extra time for dynamic content to render
                 await page.wait_for_timeout(2000)  # 2 seconds for JS execution
                 html_content = await page.content()
@@ -143,14 +139,13 @@ class ArticleExtractorService:
             # Fallback to one-off browser instance
             async with async_playwright() as p:
                 browser = await p.chromium.launch(
-                    headless=True,
-                    args=['--no-sandbox', '--disable-setuid-sandbox']
+                    headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"]
                 )
 
                 try:
                     context = await browser.new_context(
                         user_agent=self.user_agent,
-                        viewport={'width': 1920, 'height': 1080},
+                        viewport={"width": 1920, "height": 1080},
                         ignore_https_errors=False,
                     )
 
@@ -161,11 +156,7 @@ class ArticleExtractorService:
                     await stealth_instance.apply_stealth_async(page)
 
                     # Use 'load' instead of 'networkidle' for sites with continuous JS activity
-                    await page.goto(
-                        url,
-                        wait_until='load',
-                        timeout=self.timeout
-                    )
+                    await page.goto(url, wait_until="load", timeout=self.timeout)
                     # Give extra time for dynamic content to render
                     await page.wait_for_timeout(2000)  # 2 seconds for JS execution
 
@@ -182,25 +173,26 @@ class ArticleExtractorService:
 
         # Fallback to basic HTML parsing
         import re
+
         title_match = re.search(r"<title>(.*?)</title>", html_content, re.IGNORECASE)
         if title_match:
             return title_match.group(1).strip()
 
         return "Untitled Article"
 
-    def _get_author(self, metadata) -> Optional[str]:
+    def _get_author(self, metadata) -> str | None:
         """Extract author from metadata."""
         if metadata and metadata.author:
             return metadata.author
         return None
 
-    def _get_date(self, metadata) -> Optional[str]:
+    def _get_date(self, metadata) -> str | None:
         """Extract publication date from metadata."""
         if metadata and metadata.date:
             return metadata.date
         return None
 
-    def _get_excerpt(self, metadata) -> Optional[str]:
+    def _get_excerpt(self, metadata) -> str | None:
         """Extract excerpt/description from metadata."""
         if metadata and metadata.description:
             return metadata.description
@@ -218,7 +210,7 @@ class ArticleExtractorService:
             Cleaned HTML content
         """
         # Apply site-specific cleaning
-        if 'wikipedia.org' in url:
+        if "wikipedia.org" in url:
             html_content = self._remove_wikipedia_artifacts(html_content)
 
         # Apply general cleaning
@@ -240,31 +232,23 @@ class ArticleExtractorService:
         """
         # Remove [edit] section links - Pattern: [<p><a href="...action=edit...">edit</a>]</p>
         html_content = re.sub(
-            r'\[<p><a\s+href="[^"]*action=edit[^"]*">edit</a>\]</p>',
-            '',
-            html_content
+            r'\[<p><a\s+href="[^"]*action=edit[^"]*">edit</a>\]</p>', "", html_content
         )
 
         # Remove standalone [edit] links
-        html_content = re.sub(
-            r'\[<a\s+href="[^"]*action=edit[^"]*">edit</a>\]',
-            '',
-            html_content
-        )
+        html_content = re.sub(r'\[<a\s+href="[^"]*action=edit[^"]*">edit</a>\]', "", html_content)
 
         # Remove citation needed tags [citation needed]
         html_content = re.sub(
-            r'\[<a\s+href="[^"]*citation[^"]*">citation needed</a>\]',
-            '',
-            html_content
+            r'\[<a\s+href="[^"]*citation[^"]*">citation needed</a>\]', "", html_content
         )
 
         # Remove other Wikipedia metadata brackets like [update], [when?], etc.
         html_content = re.sub(
             r'\[<a\s+href="[^"]*">(?:update|when\?|by whom\?|clarification needed)</a>\]',
-            '',
+            "",
             html_content,
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE,
         )
 
         return html_content
@@ -280,6 +264,7 @@ class ArticleExtractorService:
         Returns:
             HTML with external link tags removed but text preserved
         """
+
         # Remove <a> tags that link outside the page, but keep the text
         # Match <a href="...">text</a> where href doesn't start with # (internal anchor)
         def replace_external_link(match):
@@ -287,7 +272,7 @@ class ArticleExtractorService:
             text = match.group(2)
 
             # Keep internal anchor links (e.g., href="#section")
-            if href.startswith('#'):
+            if href.startswith("#"):
                 return match.group(0)  # Return original link unchanged
 
             # For external links, return just the text content
@@ -296,9 +281,7 @@ class ArticleExtractorService:
         # Pattern: <a href="..." ...>text content</a>
         # Captures href value and text content between tags
         html_content = re.sub(
-            r'<a\s+href="([^"]*)"[^>]*>([^<]+)</a>',
-            replace_external_link,
-            html_content
+            r'<a\s+href="([^"]*)"[^>]*>([^<]+)</a>', replace_external_link, html_content
         )
 
         return html_content
@@ -314,17 +297,17 @@ class ArticleExtractorService:
             HTML with normalized spacing
         """
         # Add space after closing </a> tags if followed by uppercase letter
-        html_content = re.sub(r'</a>([A-Z])', r'</a> \1', html_content)
+        html_content = re.sub(r"</a>([A-Z])", r"</a> \1", html_content)
 
         # Add space after closing </pre> tags if followed by text
-        html_content = re.sub(r'</pre>([A-Za-z])', r'</pre> \1', html_content)
+        html_content = re.sub(r"</pre>([A-Za-z])", r"</pre> \1", html_content)
 
         # Add space after closing </code> tags if followed by text
-        html_content = re.sub(r'</code>([A-Za-z])', r'</code> \1', html_content)
+        html_content = re.sub(r"</code>([A-Za-z])", r"</code> \1", html_content)
 
         # Normalize multiple spaces to single space (but preserve in <pre> tags)
         # This is a simple approach - for production, use proper HTML parsing
-        html_content = re.sub(r'(?<=>)\s{2,}(?=<)', ' ', html_content)
+        html_content = re.sub(r"(?<=>)\s{2,}(?=<)", " ", html_content)
 
         return html_content
 
@@ -339,14 +322,14 @@ class ArticleExtractorService:
             HTML without empty tags
         """
         # Remove empty paragraph tags
-        html_content = re.sub(r'<p>\s*</p>', '', html_content)
-        html_content = re.sub(r'<p/>', '', html_content)
+        html_content = re.sub(r"<p>\s*</p>", "", html_content)
+        html_content = re.sub(r"<p/>", "", html_content)
 
         # Remove empty table elements
-        html_content = re.sub(r'<table>\s*</table>', '', html_content)
-        html_content = re.sub(r'<table/>', '', html_content)
+        html_content = re.sub(r"<table>\s*</table>", "", html_content)
+        html_content = re.sub(r"<table/>", "", html_content)
 
         # Remove multiple consecutive empty lines
-        html_content = re.sub(r'\n\s*\n\s*\n', '\n\n', html_content)
+        html_content = re.sub(r"\n\s*\n\s*\n", "\n\n", html_content)
 
         return html_content
