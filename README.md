@@ -278,7 +278,29 @@ docker run -d \
 
 ### Optional Configuration
 
-- `DROPBOX_ACCESS_TOKEN`: Dropbox access token for automatic upload
+#### Dropbox Integration
+
+To enable automatic PDF upload to Dropbox:
+
+1. Create a Dropbox App at https://www.dropbox.com/developers/apps
+2. Configure the app with the following permissions:
+   - **files.metadata.read** - Required to check if folders exist
+   - **files.content.write** - Required to upload PDF files
+   - **files.content.read** - Optional, for reading uploaded files
+   - **sharing.write** - Optional, for creating shared links
+3. Generate a never-expiring access token:
+   - Go to App Console → Settings → "Generate access token"
+4. Set the token in your `.env` file:
+   ```
+   DROPBOX_ACCESS_TOKEN=your-token-here
+   DROPBOX_FOLDER_PATH=/PaperFlow
+   ```
+5. Test the connection:
+   ```bash
+   uv run python tests/test_dropbox_connection.py
+   ```
+
+**Note**: The access token generated from the App Console is scoped to your account only and never expires (unless manually revoked).
 
 See `.env.example` for all available configuration options.
 
@@ -324,9 +346,20 @@ brew install pango cairo
 
 ### Dropbox Connection Issues
 
+**Permission Errors**: If you see errors like "not permitted to access this endpoint":
+1. Go to your Dropbox App Console → Permissions tab
+2. Enable the required scopes:
+   - `files.metadata.read`
+   - `files.content.write`
+   - `sharing.write` (optional)
+3. Click "Submit" to save the permission changes
+4. Generate a new access token (old tokens won't have the new permissions)
+5. Update your `.env` file with the new token
+
+**Other Issues**:
 1. Verify access token is valid
 2. Check folder path exists: `/PaperFlow`
-3. Ensure app has write permissions
+3. Run the test script: `uv run python tests/test_dropbox_connection.py`
 
 ### PDF Generation Errors
 

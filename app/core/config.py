@@ -33,9 +33,6 @@ class Settings(BaseSettings):
     # Dropbox API settings
     DROPBOX_ACCESS_TOKEN: Optional[str] = None
     DROPBOX_FOLDER_PATH: str = "/PaperFlow"
-    DROPBOX_REFRESH_TOKEN: Optional[str] = None
-    DROPBOX_APP_KEY: Optional[str] = None
-    DROPBOX_APP_SECRET: Optional[str] = None
 
     # Redis settings (for async job processing)
     REDIS_HOST: str = "localhost"

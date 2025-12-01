@@ -1,7 +1,6 @@
 """Dropbox integration service for PDF upload."""
 
 import os
-import httpx
 from typing import Optional
 from dropbox import Dropbox
 from dropbox.files import WriteMode
@@ -10,13 +9,10 @@ from app.core.config import settings
 
 
 class DropboxService:
-    """Service for uploading PDFs to Dropbox with automatic token refresh."""
+    """Service for uploading PDFs to Dropbox using a never-expiring access token."""
 
     def __init__(self):
         self.access_token = settings.DROPBOX_ACCESS_TOKEN
-        self.refresh_token = settings.DROPBOX_REFRESH_TOKEN
-        self.app_key = settings.DROPBOX_APP_KEY
-        self.app_secret = settings.DROPBOX_APP_SECRET
         self.folder_path = settings.DROPBOX_FOLDER_PATH
         self.client: Optional[Dropbox] = None
 
@@ -30,44 +26,7 @@ class DropboxService:
             # Verify that the token is valid
             self.client.users_get_current_account()
         except AuthError as e:
-            # Try to refresh token if refresh token is available
-            if self.refresh_token and self.app_key and self.app_secret:
-                if self._refresh_access_token():
-                    self._initialize_client()
-                    return
             raise Exception(f"Dropbox authentication failed: {str(e)}")
-
-    def _refresh_access_token(self) -> bool:
-        """
-        Refresh the access token using the refresh token.
-
-        Returns:
-            True if successful, False otherwise
-        """
-        if not (self.refresh_token and self.app_key and self.app_secret):
-            return False
-
-        try:
-            url = "https://api.dropboxapi.com/oauth2/token"
-            payload = {
-                "grant_type": "refresh_token",
-                "refresh_token": self.refresh_token,
-                "client_id": self.app_key,
-                "client_secret": self.app_secret,
-            }
-
-            response = httpx.post(url, data=payload, timeout=30.0)
-            response.raise_for_status()
-
-            data = response.json()
-            if "access_token" in data:
-                self.access_token = data["access_token"]
-                return True
-            return False
-
-        except Exception as e:
-            print(f"Token refresh failed: {str(e)}")
-            return False
 
     async def upload_file(
         self, local_path: str, remote_filename: Optional[str] = None
@@ -117,10 +76,6 @@ class DropboxService:
             return dropbox_path
 
         except AuthError as e:
-            # Token expired, try to refresh
-            if self._refresh_access_token():
-                self._initialize_client()
-                return await self.upload_file(local_path, remote_filename)
             raise Exception(f"Dropbox authentication failed: {str(e)}")
         except ApiError as e:
             raise Exception(f"Dropbox API error: {str(e)}")
@@ -144,10 +99,6 @@ class DropboxService:
             # Try to get folder metadata
             self.client.files_get_metadata(folder_path)
         except AuthError as e:
-            # Token expired, try to refresh
-            if self._refresh_access_token():
-                self._initialize_client()
-                return await self.create_folder_if_not_exists(folder_path)
             raise Exception(f"Dropbox authentication failed: {str(e)}")
         except ApiError as e:
             # If folder doesn't exist, create it
