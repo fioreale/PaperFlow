@@ -22,10 +22,26 @@ router = APIRouter()
 # Initialize services
 extractor_service = ArticleExtractorService()
 pdf_service = PDFGeneratorService()
-dropbox_service = DropboxService()
-conversion_service = ConversionService(
-    extractor_service, pdf_service, dropbox_service, job_manager
-)
+_dropbox_service = None
+_conversion_service = None
+
+
+def get_dropbox_service() -> DropboxService:
+    """Lazily initialize DropboxService to ensure environment variables are loaded."""
+    global _dropbox_service
+    if _dropbox_service is None:
+        _dropbox_service = DropboxService()
+    return _dropbox_service
+
+
+def get_conversion_service() -> ConversionService:
+    """Lazily initialize ConversionService with properly initialized Dropbox service."""
+    global _conversion_service
+    if _conversion_service is None:
+        _conversion_service = ConversionService(
+            extractor_service, pdf_service, get_dropbox_service(), job_manager
+        )
+    return _conversion_service
 
 
 @router.post("/convert", response_model=ConversionResponse)
@@ -53,6 +69,7 @@ async def convert_article(
         )
 
         # Add conversion task to background
+        conversion_service = get_conversion_service()
         background_tasks.add_task(conversion_service.convert_article, job)
 
         logger.info(f"Created conversion job {job.job_id} for URL: {request.url}")
@@ -117,6 +134,7 @@ async def convert_article_sync(request: ConversionRequest):
         )
 
         # Execute conversion synchronously
+        conversion_service = get_conversion_service()
         await conversion_service.convert_article(job)
 
         # Return final status

@@ -1,5 +1,6 @@
 """Job management service for tracking conversion jobs."""
 
+import asyncio
 import uuid
 from datetime import datetime
 from typing import Dict, Optional
@@ -61,8 +62,10 @@ class JobManager:
     or a database for persistent storage.
     """
 
-    def __init__(self):
+    def __init__(self, max_concurrent_tasks: int = 2):
         self._jobs: Dict[str, Job] = {}
+        self._semaphore = asyncio.Semaphore(max_concurrent_tasks)
+        self.max_concurrent_tasks = max_concurrent_tasks
 
     def create_job(
         self, url: str, title: Optional[str] = None, upload_to_dropbox: bool = True
@@ -158,6 +161,14 @@ class JobManager:
 
         for job_id in jobs_to_delete:
             del self._jobs[job_id]
+
+    async def acquire_task_slot(self):
+        """
+        Acquire a slot for concurrent task execution.
+
+        Returns a context manager that releases the slot when exited.
+        """
+        return self._semaphore
 
 
 # Global job manager instance
