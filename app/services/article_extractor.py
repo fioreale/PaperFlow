@@ -4,6 +4,7 @@ import re
 import trafilatura
 from typing import Optional
 from playwright.async_api import async_playwright, Browser, BrowserContext
+from playwright_stealth import Stealth
 from app.schemas.conversion import ArticleContent
 
 
@@ -16,6 +17,7 @@ class ArticleExtractorService:
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         self._browser: Optional[Browser] = None
         self._context: Optional[BrowserContext] = None
+        self._stealth = Stealth()
 
     async def __aenter__(self):
         """Async context manager entry - initialize browser."""
@@ -120,6 +122,9 @@ class ArticleExtractorService:
         if self._context:
             page = await self._context.new_page()
             try:
+                # Apply stealth mode to avoid bot detection
+                await self._stealth.apply_stealth_async(page)
+
                 # Use 'load' instead of 'networkidle' for sites with continuous JS activity
                 # 'load' waits for the load event (DOM + resources), which is more reliable
                 # than 'networkidle' for dynamic sites like Medium
@@ -150,6 +155,10 @@ class ArticleExtractorService:
                     )
 
                     page = await context.new_page()
+
+                    # Apply stealth mode to avoid bot detection
+                    stealth_instance = Stealth()
+                    await stealth_instance.apply_stealth_async(page)
 
                     # Use 'load' instead of 'networkidle' for sites with continuous JS activity
                     await page.goto(

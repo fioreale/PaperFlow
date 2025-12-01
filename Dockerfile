@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for WeasyPrint and other tools
+# Install system dependencies for WeasyPrint, Playwright and other tools
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
@@ -15,6 +15,21 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     shared-mime-info \
     fonts-liberation \
+    # Playwright dependencies
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
@@ -23,6 +38,9 @@ COPY app ./app
 
 # Install Python dependencies directly
 RUN pip install --no-cache-dir -e .
+
+# Install Playwright browsers (chromium by default)
+RUN playwright install --with-deps chromium
 
 # Create temp directory for PDF generation
 RUN mkdir -p /tmp/paperflow
