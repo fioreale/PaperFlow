@@ -24,10 +24,11 @@ Usage:
     python tests/test_api_routes.py
 
 Note:
-    Some tests require Playwright browser to work correctly. If you encounter
-    "Page crashed" errors, this is a known Playwright/macOS compatibility issue.
-    The validation tests (health, error handling, input validation) will work
-    regardless of Playwright status.
+    By default, the article extractor uses trafilatura's lightweight fetching.
+    Set ENABLE_PLAYWRIGHT=True to use Playwright for JavaScript-rendered pages.
+    If Playwright is enabled and you encounter "Page crashed" errors, this is a
+    known Playwright/macOS compatibility issue. The validation tests (health,
+    error handling, input validation) will work regardless of Playwright status.
 """
 
 import os
@@ -68,14 +69,16 @@ async def browser_service():
     """Create a persistent browser service for all tests."""
     from app.services.article_extractor import ArticleExtractorService
 
-    # Initialize browser once for all tests
+    # Initialize browser once for all tests (only if Playwright is enabled)
     service = ArticleExtractorService()
-    await service._initialize_browser()
+    if settings.ENABLE_PLAYWRIGHT:
+        await service._initialize_browser()
 
     yield service
 
-    # Cleanup after all tests
-    await service.close()
+    # Cleanup after all tests (only if Playwright is enabled)
+    if settings.ENABLE_PLAYWRIGHT:
+        await service.close()
 
 
 @pytest.fixture
