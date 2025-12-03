@@ -50,7 +50,7 @@ jobs:
       - name: Get current version
         id: get_version
         run: |
-          CURRENT_VERSION=$(grep -Po '(?<=version = ")[^"]*' pyproject.toml)
+          CURRENT_VERSION=$(grep -Po '^version = "\K[^"]*' pyproject.toml)
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT_VERSION"
 
