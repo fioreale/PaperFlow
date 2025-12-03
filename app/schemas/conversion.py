@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel, HttpUrl, Field, ConfigDict
 
 
 class JobStatus(str, Enum):
@@ -24,14 +24,15 @@ class ConversionRequest(BaseModel):
         True, description="Whether to upload the PDF to Dropbox"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "url": "https://example.com/article",
                 "title": "My Custom Title",
                 "upload_to_dropbox": True,
             }
         }
+    )
 
 
 class ConversionResponse(BaseModel):
@@ -42,8 +43,8 @@ class ConversionResponse(BaseModel):
     message: str = Field(..., description="Human-readable message about the job")
     created_at: datetime = Field(..., description="Timestamp when the job was created")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "job_id": "abc123",
                 "status": "pending",
@@ -51,6 +52,7 @@ class ConversionResponse(BaseModel):
                 "created_at": "2025-01-15T10:30:00Z",
             }
         }
+    )
 
 
 class JobStatusResponse(BaseModel):
@@ -69,8 +71,8 @@ class JobStatusResponse(BaseModel):
         None, description="Timestamp when job completed"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "job_id": "abc123",
                 "status": "completed",
@@ -84,6 +86,7 @@ class JobStatusResponse(BaseModel):
                 "completed_at": "2025-01-15T10:30:45Z",
             }
         }
+    )
 
 
 class ArticleContent(BaseModel):

@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
@@ -54,9 +55,10 @@ class Settings(BaseSettings):
     TEMP_DIR: str = "/tmp/paperflow"
     MAX_CONTENT_LENGTH: int = 10 * 1024 * 1024  # 10MB
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True
+    )
 
 
 settings = Settings()
