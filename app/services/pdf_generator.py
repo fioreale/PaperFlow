@@ -2,12 +2,15 @@
 
 import os
 import gc
+import logging
 from pathlib import Path
 from typing import Optional
 from playwright.async_api import async_playwright, Browser, Page
 from jinja2 import Environment, FileSystemLoader
 from app.core.config import settings
 from app.schemas.conversion import ArticleContent
+
+logger = logging.getLogger(__name__)
 
 
 class PDFGeneratorService:
@@ -83,58 +86,120 @@ class PDFGeneratorService:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             # Generate PDF using Playwright with memory-optimized settings
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        # Memory optimizations
-                        '--disable-dev-shm-usage',  # Use /tmp instead of /dev/shm
-                        '--disable-gpu',
-                        '--disable-software-rasterizer',
-                        '--no-sandbox',
-                        '--single-process',  # Use single process to save memory
-                        '--disable-background-networking',
-                        '--disable-background-timer-throttling',
-                        '--disable-backgrounding-occluded-windows',
-                        '--disable-breakpad',
-                        '--disable-component-extensions-with-background-pages',
-                        '--disable-extensions',
-                        '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-                        '--disable-ipc-flooding-protection',
-                        '--disable-renderer-backgrounding',
-                        '--enable-features=NetworkService,NetworkServiceInProcess',
-                        '--force-color-profile=srgb',
-                        '--hide-scrollbars',
-                        '--metrics-recording-only',
-                        '--mute-audio',
-                        '--no-first-run',
-                        # Memory limits
-                        '--js-flags=--max-old-space-size=128',  # Limit V8 heap to 128MB
-                    ]
-                )
+            browser = None
+            page = None
 
-                try:
-                    page = await browser.new_page()
-
-                    # Navigate to the HTML file
-                    await page.goto(f"file://{os.path.abspath(html_file)}", wait_until="networkidle")
-
-                    # Generate PDF with settings matching your requirements
-                    await page.pdf(
-                        path=output_path,
-                        format=settings.PDF_PAGE_SIZE,
-                        margin={
-                            'top': settings.PDF_MARGIN,
-                            'right': settings.PDF_MARGIN,
-                            'bottom': settings.PDF_MARGIN,
-                            'left': settings.PDF_MARGIN,
-                        },
-                        print_background=False,  # Don't print background colors (e-ink optimization)
-                        prefer_css_page_size=False,
+            try:
+                logger.info("Starting Playwright for PDF generation")
+                async with async_playwright() as p:
+                    # Launch browser with timeout
+                    logger.info("Launching Chromium browser...")
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        timeout=30000,  # 30 second timeout for browser launch
+                        args=[
+                            # Memory optimizations
+                            '--disable-dev-shm-usage',  # Use /tmp instead of /dev/shm
+                            '--disable-gpu',
+                            '--disable-software-rasterizer',
+                            '--no-sandbox',
+                            '--single-process',  # Use single process to save memory
+                            '--disable-background-networking',
+                            '--disable-background-timer-throttling',
+                            '--disable-backgrounding-occluded-windows',
+                            '--disable-breakpad',
+                            '--disable-component-extensions-with-background-pages',
+                            '--disable-extensions',
+                            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                            '--disable-ipc-flooding-protection',
+                            '--disable-renderer-backgrounding',
+                            '--enable-features=NetworkService,NetworkServiceInProcess',
+                            '--force-color-profile=srgb',
+                            '--hide-scrollbars',
+                            '--metrics-recording-only',
+                            '--mute-audio',
+                            '--no-first-run',
+                            # Memory limits
+                            '--js-flags=--max-old-space-size=128',  # Limit V8 heap to 128MB
+                        ]
                     )
 
-                finally:
-                    await browser.close()
+                    # Validate browser is connected before proceeding
+                    if not browser or not browser.is_connected():
+                        logger.error("Browser failed to launch or connect")
+                        raise Exception("Browser failed to launch or connect")
+
+                    logger.info(f"Browser launched successfully (connected: {browser.is_connected()})")
+
+                    # Create new page with error handling
+                    try:
+                        logger.info("Creating new browser page...")
+                        page = await browser.new_page()
+                        logger.info("Browser page created successfully")
+                    except Exception as e:
+                        logger.error(f"Failed to create new page: {str(e)}")
+                        raise Exception(f"Failed to create new page: {str(e)}")
+
+                    # Navigate to the HTML file with timeout
+                    try:
+                        logger.info(f"Loading HTML file: {html_file}")
+                        await page.goto(
+                            f"file://{os.path.abspath(html_file)}",
+                            wait_until="networkidle",
+                            timeout=30000  # 30 second timeout
+                        )
+                        logger.info("HTML file loaded successfully")
+                    except Exception as e:
+                        logger.error(f"Failed to load HTML file: {str(e)}")
+                        raise Exception(f"Failed to load HTML file: {str(e)}")
+
+                    # Generate PDF with settings matching your requirements
+                    try:
+                        logger.info(f"Generating PDF to: {output_path}")
+                        await page.pdf(
+                            path=output_path,
+                            format=settings.PDF_PAGE_SIZE,
+                            margin={
+                                'top': settings.PDF_MARGIN,
+                                'right': settings.PDF_MARGIN,
+                                'bottom': settings.PDF_MARGIN,
+                                'left': settings.PDF_MARGIN,
+                            },
+                            print_background=False,  # Don't print background colors (e-ink optimization)
+                            prefer_css_page_size=False,
+                        )
+                        logger.info("PDF generated successfully")
+                    except Exception as e:
+                        logger.error(f"Failed to generate PDF: {str(e)}")
+                        raise Exception(f"Failed to generate PDF: {str(e)}")
+
+                    # Cleanup page before browser
+                    if page:
+                        logger.info("Closing browser page...")
+                        await page.close()
+                        page = None
+
+                    if browser:
+                        logger.info("Closing browser...")
+                        await browser.close()
+                        browser = None
+
+            except Exception as e:
+                logger.error(f"PDF generation error: {str(e)}")
+                # Ensure cleanup on error
+                if page:
+                    try:
+                        logger.info("Cleaning up page after error...")
+                        await page.close()
+                    except Exception as cleanup_error:
+                        logger.warning(f"Failed to close page during cleanup: {cleanup_error}")
+                if browser:
+                    try:
+                        logger.info("Cleaning up browser after error...")
+                        await browser.close()
+                    except Exception as cleanup_error:
+                        logger.warning(f"Failed to close browser during cleanup: {cleanup_error}")
+                raise
 
             # Cleanup temporary HTML file
             if html_file and os.path.exists(html_file):
