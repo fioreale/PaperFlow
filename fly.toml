@@ -15,6 +15,7 @@ primary_region = 'fra'
   DROPBOX_FOLDER_PATH = '/articles'
   HOST = '0.0.0.0'
   MAX_CONTENT_LENGTH = '10485760'
+  MAX_ARTICLE_LENGTH = '500000'
   PDF_FONT_SIZE = '12pt'
   PDF_LINE_HEIGHT = '1.6'
   PDF_MARGIN = '1in'
@@ -24,6 +25,9 @@ primary_region = 'fra'
   RATE_LIMIT_PER_MINUTE = '100'
   TEMP_DIR = '/tmp/paperflow'
   VERSION = '0.1.0'
+  # Memory optimization for 256MB environments
+  PYTHONMALLOC = 'malloc'
+  MALLOC_TRIM_THRESHOLD_ = '100000'
 
 [http_service]
   internal_port = 8000
