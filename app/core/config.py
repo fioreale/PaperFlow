@@ -32,7 +32,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 100
 
     # Dropbox API settings
-    DROPBOX_ACCESS_TOKEN: Optional[str] = None
+    DROPBOX_APP_KEY: Optional[str] = None
+    DROPBOX_APP_SECRET: Optional[str] = None
+    DROPBOX_REFRESH_TOKEN: Optional[str] = None
+    DROPBOX_ACCESS_TOKEN: Optional[str] = None  # Deprecated: kept for backwards compatibility
     DROPBOX_FOLDER_PATH: str = "/PaperFlow"
 
     # Redis settings (for async job processing)
