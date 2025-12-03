@@ -93,13 +93,13 @@ def mock_dropbox_service(monkeypatch):
     mock_service.create_folder_if_not_exists = AsyncMock()
     mock_service.get_shared_link = AsyncMock(return_value="https://www.dropbox.com/s/test123")
 
-    # Patch the dropbox_service instance in the conversion routes module
+    # Patch the get_dropbox_service function to return our mock
     import app.api.routes.conversion as conversion_routes
-    monkeypatch.setattr(conversion_routes, "dropbox_service", mock_service)
+    monkeypatch.setattr(conversion_routes, "get_dropbox_service", lambda: mock_service)
 
-    # Also patch it in the conversion service if it's already been created
-    if hasattr(conversion_routes, "conversion_service"):
-        conversion_routes.conversion_service.dropbox = mock_service
+    # Reset the cached services so they use the mock
+    monkeypatch.setattr(conversion_routes, "_dropbox_service", mock_service)
+    monkeypatch.setattr(conversion_routes, "_conversion_service", None)
 
     return mock_service
 
