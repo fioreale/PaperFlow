@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     TEMP_DIR: str = "/tmp/paperflow"
     MAX_CONTENT_LENGTH: int = 10 * 1024 * 1024  # 10MB
 
+    # Memory protection settings (for 256MB RAM environments)
+    MAX_ARTICLE_LENGTH: int = 500_000  # ~500KB of text content (~50 pages)
+
     # Article extraction settings
     ENABLE_PLAYWRIGHT: bool = False  # Set to True to use Playwright for JavaScript-rendered pages
 

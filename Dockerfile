@@ -2,18 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for WeasyPrint, Playwright and other tools
+# Install system dependencies for Playwright (removed WeasyPrint deps for memory savings)
 RUN apt-get update && apt-get install -y \
     curl \
-    gcc \
-    g++ \
-    libpango-1.0-0 \
-    libpangoft2-1.0-0 \
-    libgdk-pixbuf-xlib-2.0-0 \
-    libffi-dev \
-    libcairo2 \
-    libcairo2-dev \
-    shared-mime-info \
     fonts-liberation \
     # Playwright dependencies
     libnss3 \
