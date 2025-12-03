@@ -39,5 +39,5 @@ RUN mkdir -p /tmp/paperflow
 # Expose port
 EXPOSE 8000
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application with swap configuration (non-fatal if swap fails)
+CMD ["sh", "-c", "(fallocate -l 512M /swapfile && chmod 0600 /swapfile && mkswap /swapfile && echo 10 > /proc/sys/vm/swappiness && swapon /swapfile && echo 1 > /proc/sys/vm/overcommit_memory && echo 'Swap configured successfully') || echo 'Swap setup failed, continuing without swap'; uvicorn app.main:app --host 0.0.0.0 --port 8000"]

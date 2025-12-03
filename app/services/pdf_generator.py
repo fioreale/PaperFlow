@@ -3,9 +3,9 @@
 import os
 import gc
 import logging
+import asyncio
 from pathlib import Path
-from typing import Optional
-from playwright.async_api import async_playwright, Browser, Page
+from playwright.async_api import async_playwright
 from jinja2 import Environment, FileSystemLoader
 from app.core.config import settings
 from app.schemas.conversion import ArticleContent
@@ -96,14 +96,14 @@ class PDFGeneratorService:
                     logger.info("Launching Chromium browser...")
                     browser = await p.chromium.launch(
                         headless=True,
-                        timeout=30000,  # 30 second timeout for browser launch
+                        timeout=60000,  # 60 second timeout for browser launch in low memory
                         args=[
                             # Memory optimizations
                             '--disable-dev-shm-usage',  # Use /tmp instead of /dev/shm
                             '--disable-gpu',
                             '--disable-software-rasterizer',
                             '--no-sandbox',
-                            '--single-process',  # Use single process to save memory
+                            '--disable-setuid-sandbox',
                             '--disable-background-networking',
                             '--disable-background-timer-throttling',
                             '--disable-backgrounding-occluded-windows',
@@ -119,8 +119,11 @@ class PDFGeneratorService:
                             '--metrics-recording-only',
                             '--mute-audio',
                             '--no-first-run',
+                            '--disable-sync',
+                            '--disable-translate',
+                            '--disable-default-apps',
                             # Memory limits
-                            '--js-flags=--max-old-space-size=128',  # Limit V8 heap to 128MB
+                            '--js-flags=--max-old-space-size=96',  # Limit V8 heap to 96MB
                         ]
                     )
 
@@ -130,6 +133,9 @@ class PDFGeneratorService:
                         raise Exception("Browser failed to launch or connect")
 
                     logger.info(f"Browser launched successfully (connected: {browser.is_connected()})")
+
+                    # Small delay to ensure browser is fully initialized
+                    await asyncio.sleep(0.5)
 
                     # Create new page with error handling
                     try:
@@ -247,12 +253,12 @@ class PDFGeneratorService:
 
         return f"{filename}.pdf"
 
-    def get_output_path(self, job_id: str, title: str) -> str:
+    def get_output_path(self, _job_id: str, title: str) -> str:
         """
         Generate output path for PDF file.
 
         Args:
-            job_id: Unique job identifier
+            _job_id: Unique job identifier (currently unused)
             title: Article title
 
         Returns:
