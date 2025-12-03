@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     TEMP_DIR: str = "/tmp/paperflow"
     MAX_CONTENT_LENGTH: int = 10 * 1024 * 1024  # 10MB
 
+    # Article extraction settings
+    ENABLE_PLAYWRIGHT: bool = False  # Set to True to use Playwright for JavaScript-rendered pages
+
     model_config = ConfigDict(
         env_file=".env",
         case_sensitive=True

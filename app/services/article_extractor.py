@@ -1,36 +1,53 @@
-"""Article content extraction service using trafilatura and playwright."""
+"""Article content extraction service using trafilatura and optionally playwright."""
 
 import re
+from typing import Optional
 
 import trafilatura
-from playwright.async_api import Browser, BrowserContext, async_playwright
-from playwright_stealth import Stealth
 
+from app.core.config import settings
 from app.schemas.conversion import ArticleContent
+
+# Conditionally import Playwright dependencies only if enabled
+if settings.ENABLE_PLAYWRIGHT:
+    from playwright.async_api import Browser, BrowserContext, async_playwright
+    from playwright_stealth import Stealth
 
 
 class ArticleExtractorService:
-    """Service for extracting article content using trafilatura and playwright."""
+    """Service for extracting article content using trafilatura.
+
+    By default, uses trafilatura's lightweight HTTP fetching.
+    Optionally uses Playwright for JavaScript-rendered pages when ENABLE_PLAYWRIGHT=True.
+    """
 
     def __init__(self):
         """Initialize the article extractor service."""
         self.timeout = 60000  # 60 seconds in milliseconds for Playwright
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        self._browser: Browser | None = None
-        self._context: BrowserContext | None = None
-        self._stealth = Stealth()
+
+        # Only initialize Playwright-related attributes if enabled
+        if settings.ENABLE_PLAYWRIGHT:
+            self._browser: Optional[Browser] = None
+            self._context: Optional[BrowserContext] = None
+            self._stealth = Stealth()
 
     async def __aenter__(self):
-        """Async context manager entry - initialize browser."""
-        await self._initialize_browser()
+        """Async context manager entry - initialize browser if Playwright is enabled."""
+        if settings.ENABLE_PLAYWRIGHT:
+            await self._initialize_browser()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit - cleanup browser."""
-        await self.close()
+        """Async context manager exit - cleanup browser if Playwright is enabled."""
+        if settings.ENABLE_PLAYWRIGHT:
+            await self.close()
 
     async def _initialize_browser(self):
-        """Initialize a persistent browser instance for reuse."""
+        """Initialize a persistent browser instance for reuse (Playwright only)."""
+        if not settings.ENABLE_PLAYWRIGHT:
+            return
+
         if self._browser is None:
             playwright = await async_playwright().start()
             self._browser = await playwright.chromium.launch(
@@ -43,7 +60,10 @@ class ArticleExtractorService:
             )
 
     async def close(self):
-        """Close the browser and cleanup resources."""
+        """Close the browser and cleanup resources (Playwright only)."""
+        if not settings.ENABLE_PLAYWRIGHT:
+            return
+
         if self._context:
             await self._context.close()
             self._context = None
@@ -106,6 +126,48 @@ class ArticleExtractorService:
         )
 
     async def _fetch_html(self, url: str) -> str:
+        """
+        Fetch HTML content from a URL.
+
+        Uses trafilatura's lightweight fetching by default.
+        Uses Playwright for JavaScript rendering if ENABLE_PLAYWRIGHT=True.
+
+        Args:
+            url: The URL to fetch
+
+        Returns:
+            HTML content as a string
+
+        Raises:
+            Exception: If fetching fails
+        """
+        if settings.ENABLE_PLAYWRIGHT:
+            return await self._fetch_html_with_playwright(url)
+        else:
+            return await self._fetch_html_with_trafilatura(url)
+
+    async def _fetch_html_with_trafilatura(self, url: str) -> str:
+        """
+        Fetch HTML content using trafilatura's built-in lightweight fetching.
+
+        Args:
+            url: The URL to fetch
+
+        Returns:
+            HTML content as a string
+
+        Raises:
+            Exception: If fetching fails
+        """
+        # Use trafilatura's fetch_url which is lightweight and handles most sites
+        html_content = trafilatura.fetch_url(url)
+
+        if not html_content:
+            raise Exception(f"Failed to fetch content from {url}")
+
+        return html_content
+
+    async def _fetch_html_with_playwright(self, url: str) -> str:
         """
         Fetch HTML content from a URL using Playwright for JavaScript rendering.
 
@@ -172,27 +234,25 @@ class ArticleExtractorService:
             return metadata.title
 
         # Fallback to basic HTML parsing
-        import re
-
         title_match = re.search(r"<title>(.*?)</title>", html_content, re.IGNORECASE)
         if title_match:
             return title_match.group(1).strip()
 
         return "Untitled Article"
 
-    def _get_author(self, metadata) -> str | None:
+    def _get_author(self, metadata) -> Optional[str]:
         """Extract author from metadata."""
         if metadata and metadata.author:
             return metadata.author
         return None
 
-    def _get_date(self, metadata) -> str | None:
+    def _get_date(self, metadata) -> Optional[str]:
         """Extract publication date from metadata."""
         if metadata and metadata.date:
             return metadata.date
         return None
 
-    def _get_excerpt(self, metadata) -> str | None:
+    def _get_excerpt(self, metadata) -> Optional[str]:
         """Extract excerpt/description from metadata."""
         if metadata and metadata.description:
             return metadata.description
